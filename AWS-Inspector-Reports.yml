@@ -5,7 +5,7 @@ Parameters:
   
   InspectorS3Bucket:
     Type: String
-    Default: "Your Bucket name"
+    Default: "Your Bucket name."
 
   InspectorLambda:
     Type: String
