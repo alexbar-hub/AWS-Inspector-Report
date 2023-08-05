@@ -54,6 +54,25 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
       AccessControl: BucketOwnerFullControl
+      LifecycleConfiguration:
+        Rules:
+          - Id: Transition to Glacier after 90 days
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+          - Id: Delete-Incomplete-MPU-7Days
+            Status: Enabled
+            Prefix: ''
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+          - Id: Expire and delete after 5 years
+            Status: Enabled
+            Prefix: ''
+            ExpirationInDays: 1825
+            NoncurrentVersionExpiration: 
+              NoncurrentDays: 1
+
   
   SnsTopic:
     Type: "AWS::SNS::Topic"

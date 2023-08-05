@@ -14,7 +14,10 @@ This project builds all you need in order to get a report from Amazon Inspector 
 
 ## What it does
 This CloudFormation Stack creates the following resources:
-* a S3 bucket to host all your reports;
+* a S3 bucket to host all your reports with the following lifecycle rules in place:
+  * Transition to Glacier after 90 days
+  * Delete Incomplete Multipart Uploads after 7 days;
+  * Expire and delete objects after 5 years;
 * a Lambda function that extracts all the needed data from SecurityHub and saves it into the bucket above (all logs will be saved to CloudWatch);
 * an IAM role, with 3 policies, so that the Lambda can do its job;
 * a SNS Topic with 2 preconfigured subscriptions to get the notification into your mailbox;
