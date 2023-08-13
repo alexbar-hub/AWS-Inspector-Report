@@ -5,7 +5,11 @@ Parameters:
   
   InspectorS3Bucket:
     Type: String
-    Default: "Your Bucket name."
+    Default: "Your Bucket name - For automatically generated reports."
+
+  InspectorS3BucketConsole:
+    Type: String
+    Default: "Your Bucket name - For reports generated via console"
 
   InspectorLambda:
     Type: String
@@ -34,6 +38,10 @@ Parameters:
   InspectorCloudWatchGroup:
     Type: String
     Default: /aws/lambda
+
+  InspectorKMSAlias:
+    Type: String
+    Default: cla-infrastructure-inspector-reports
 
 Resources:
 
@@ -73,7 +81,127 @@ Resources:
             NoncurrentVersionExpiration: 
               NoncurrentDays: 1
 
-  
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: "Allow lambda to perform Put and Delete actions on s3"
+            Action:
+            - 's3:PutObject'
+            - 's3:PutObjectAcl'
+            - 's3:AbortMultipartUpload'
+            Effect: Allow
+            Resource: 
+              - !Sub 'arn:aws:s3:::${S3Bucket}/*'
+            Principal:
+              Service: 
+                - 'lambda.amazonaws.com'
+
+
+  S3BucketConsole:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Ref InspectorS3BucketConsole
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: "aws:kms"
+              KMSMasterKeyID: 
+                Fn::GetAtt:
+                - KmsKey
+                - Arn
+      VersioningConfiguration:
+        Status: "Suspended"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      AccessControl: BucketOwnerFullControl
+      LifecycleConfiguration:
+        Rules:
+          - Id: Transition to Glacier after 90 days
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+          - Id: Delete-Incomplete-MPU-7Days
+            Status: Enabled
+            Prefix: ''
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+          - Id: Expire and delete after 5 years
+            Status: Enabled
+            Prefix: ''
+            ExpirationInDays: 1825
+            NoncurrentVersionExpiration: 
+              NoncurrentDays: 1
+
+  S3BucketPolicyConsole:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3BucketConsole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: "Allow inspector to perform Put and Delete actions on s3"
+            Action:
+            - 's3:PutObject'
+            - 's3:PutObjectAcl'
+            - 's3:AbortMultipartUpload'
+            Effect: Allow
+            Resource: 
+              - !Sub 'arn:aws:s3:::${S3BucketConsole}/*'
+            Principal:
+              Service: 
+                - 'inspector2.amazonaws.com'
+
+  KmsKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      EnableKeyRotation: false
+      MultiRegion: true
+      Description: "Key used by AmazonInspector"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "Enable IAM User Permissions"
+            Effect: "Allow"
+            Principal:
+              AWS:
+                Fn::Join:
+                  - ""
+                  -
+                    - "arn:aws:iam::"
+                    - Ref: "AWS::AccountId"
+                    - ":root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: "Allow inspector to perform kms actions"
+            Effect: "Allow"
+            Principal:
+              Service: 'inspector2.amazonaws.com'
+            Action: 
+              - "kms:Decrypt"
+              - "kms:GenerateDataKey*"
+            Resource: "*"
+
+  KmsKeyAliasKmsKey:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName:
+        Fn::Join:
+          - ""
+          - 
+            - "alias/"
+            - Ref: "InspectorKMSAlias"
+      TargetKeyId:
+        Ref: "KmsKey"
+
   SnsTopic:
     Type: "AWS::SNS::Topic"
     Properties:

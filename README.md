@@ -14,7 +14,7 @@ This project builds all you need in order to get a report from Amazon Inspector 
 
 ## What it does
 This CloudFormation Stack creates the following resources:
-* a S3 bucket to host all your reports with the following lifecycle rules in place:
+* a S3 bucket to host all your automatically created reports with the following lifecycle rules in place:
   * Transition to Glacier after 90 days
   * Delete Incomplete Multipart Uploads after 7 days;
   * Expire and delete objects after 5 years;
@@ -22,6 +22,11 @@ This CloudFormation Stack creates the following resources:
 * an IAM role, with 3 policies, so that the Lambda can do its job;
 * a SNS Topic with 2 preconfigured subscriptions to get the notification into your mailbox;
 * an EvenBridge rule that triggers the Lambda above on a schedule;
+* a second S3 bucket with KMS encryption to host all your manually created reports (via console) with the following lifecycle rules in place:
+  * Transition to Glacier after 90 days
+  * Delete Incomplete Multipart Uploads after 7 days;
+  * Expire and delete objects after 5 years;
+* a KMS key used to encrypt the second bucket content
 
 Note: the link you receive is configured to expire after 12 hours for security reasons.
 
