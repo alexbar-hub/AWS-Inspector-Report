@@ -436,12 +436,14 @@ Resources:
           SnsTopicArn: !Ref SnsTopic
           BucketName: !Ref S3Bucket
       MemorySize: 1024
+      EphemeralStorage:
+        Size: 1024
       Role: 
         Fn::GetAtt:
         - IAMLambdaRole
         - Arn
       Runtime: "python3.9"
-      Timeout: 600
+      Timeout: 900
 
   InspectorReportsRule:
     Type: 'AWS::Events::Rule'
